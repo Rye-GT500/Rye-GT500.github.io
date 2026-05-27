@@ -32,7 +32,6 @@
             text-align: center;
         }
 
-        /* 🎯 新增：即時計時器樣式 */
         .timer-container {
             font-size: 28px;
             font-weight: bold;
@@ -258,16 +257,16 @@
     </div>
 
     <script>
-        let passwordLength = 5; // 預設 5 碼
+        let passwordLength = 5; 
         let targetAnswer = "";
         let currentInput = [];
         let selectedIndex = 0;
         
-        // 計時與統計數據
         let startTime = 0;
         let guessCount = 0;
         let isGameOver = false;
-        let timerInterval = null; // 🎯 新增：控管計時器的變數
+        let timerInterval = null; 
+        let isTimerStarted = false; // 🎯 核心改動：追蹤計時器是否已經被觸發開跑
 
         // 初始化遊戲盤面
         function initGame() {
@@ -275,22 +274,17 @@
             guessCount = 0;
             selectedIndex = 0;
             
-            // 🎯 清除上一次的計時器執行緒
+            // 🎯 初始化時直接關閉舊計時器，且先「不」啟動新計時器
             if (timerInterval) {
                 clearInterval(timerInterval);
             }
+            isTimerStarted = false; 
             
-            startTime = Date.now();
             document.getElementById('game-timer').innerText = "00.00 秒";
-            
-            // 🎯 啟動每 30 毫秒刷新一次的即時計時器 (高精準度)
-            timerInterval = setInterval(updateTimerUI, 30);
-            
-            // 隱藏彈窗並清空歷史
             document.getElementById('win-overlay').style.display = 'none';
             document.getElementById('history-scroll').innerHTML = '';
 
-            // 1. 隨機產生可重複的密碼
+            // 1. 隨機產生密碼
             targetAnswer = "";
             for (let i = 0; i < passwordLength; i++) {
                 targetAnswer += Math.floor(Math.random() * 10).toString();
@@ -319,7 +313,15 @@
             updateFocusUI();
         }
 
-        // 🎯 新增：計算並更新計時器面板的函式
+        // 🎯 新增：負責在「第一次敲擊按鍵」時啟動時間軸的函式
+        function startTimerIfNeeded() {
+            if (!isTimerStarted && !isGameOver) {
+                isTimerStarted = true;
+                startTime = Date.now(); // 以按下第一個數字的當下作為基準起點
+                timerInterval = setInterval(updateTimerUI, 30);
+            }
+        }
+
         function updateTimerUI() {
             if (isGameOver) return;
             const elapsed = (Date.now() - startTime) / 1000;
@@ -341,6 +343,9 @@
         // 處理鍵盤點擊
         function handleKeyPress(key) {
             if (isGameOver) return;
+
+            // 🎯 核心改動：只要玩家有點擊任何有效按鍵（數字、倒退或確認），立刻檢查並啟動計時
+            startTimerIfNeeded();
 
             if (key === '⌫') {
                 currentInput[selectedIndex] = "";
@@ -396,7 +401,7 @@
 
             if (correctCount === passwordLength) {
                 isGameOver = true;
-                clearInterval(timerInterval); // 🎯 破譯成功立刻凍結計時器
+                clearInterval(timerInterval); // 破譯成功立刻凍結
                 
                 const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
                 
