@@ -311,12 +311,12 @@
                     const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
 
                     sendDataToBackend("memory_match", `${rows}x${cols}網格`, timeUsed, 0);
-                    
+
                     setTimeout(() => {
                         document.getElementById('result-text').innerHTML = 
                             `修復規格：<b>${rows} x ${cols} 網格</b><br>` +
                             `修復時間：<span style="color:#2ECC71; font-weight:bold;">${timeUsed} 秒</span><br><br>` +
-                            `請將此結果截圖回報給叡叡！`;
+                            `數據已自動同步至後台，感謝參與測試！`; // ➔ 修改這行
                         document.getElementById('win-overlay').style.display = 'flex';
                     }, 500);
                 }
