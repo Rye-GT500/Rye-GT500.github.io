@@ -140,6 +140,7 @@
             align-items: center;
             width: 100%;
             max-width: 400px;
+            margin-bottom: 30px; /* 留出空間給返回按鈕 */
         }
 
         .keyboard-row {
@@ -184,6 +185,26 @@
         .color-green { background-color: #2ECC71; border-color: #2ECC71; }
         .color-yellow { background-color: #F1C40F; border-color: #F1C40F; }
         .color-red { background-color: #E74C3C; border-color: #E74C3C; }
+
+        /* 🎯 新增：返回大廳按鈕樣式 */
+        .back-btn {
+            background-color: #331111;
+            color: #E74C3C;
+            border: 1px solid #E74C3C;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background-color: #E74C3C;
+            color: white;
+            box-shadow: 0 0 10px #E74C3C;
+        }
 
         /* 彈窗提示 */
         .overlay {
@@ -247,6 +268,8 @@
             <button class="key-btn action-submit" onclick="handleKeyPress('✔')">✔</button>
         </div>
     </div>
+
+    <a href="../" class="back-btn">放棄破譯 (返回大廳)</a>
 
     <div id="win-overlay" class="overlay">
         <div class="modal">
@@ -327,17 +350,16 @@
             document.getElementById('game-timer').innerText = elapsed.toFixed(2) + " 秒";
         }
 
-        // 🎯 新增：自動同步傳送數據至 Google 表單後台
+        // 自動同步傳送數據至 Google 表單後台
         function sendDataToBackend(gameType, difficulty, seconds, attempts) {
             const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdZPnQ-HjS57yLN3OZWQFxthZ7jrjiLqVSzYLoLQbEgFevVGA/formResponse";
             
             const formData = new FormData();
-            formData.append("entry.933068395", gameType);     // 遊戲類型
-            formData.append("entry.285404027", difficulty);   // 難度位數
-            formData.append("entry.1023575376", seconds);      // 破譯秒數
-            formData.append("entry.1728759450", attempts);     // 嘗試次數
+            formData.append("entry.933068395", gameType);     
+            formData.append("entry.285404027", difficulty);   
+            formData.append("entry.1023575376", seconds);      
+            formData.append("entry.1728759450", attempts);     
 
-            // 使用背景非同步發送，mode: 'no-cors' 確保跨域請求能安全送達
             fetch(formUrl, {
                 method: "POST",
                 body: formData,
@@ -419,11 +441,10 @@
 
             if (correctCount === passwordLength) {
                 isGameOver = true;
-                clearInterval(timerInterval); // 破譯成功立刻凍結
+                clearInterval(timerInterval); 
                 
                 const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
                 
-                // 🎯 觸發自動數據上傳
                 sendDataToBackend("numberle", passwordLength + "位數", timeUsed, guessCount);
 
                 setTimeout(() => {
