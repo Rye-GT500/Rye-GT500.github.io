@@ -310,6 +310,8 @@
                     clearInterval(timerInterval);
                     const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
 
+                    sendDataToBackend("memory_match", `${rows}x${cols}網格`, timeUsed, 0);
+                    
                     setTimeout(() => {
                         document.getElementById('result-text').innerHTML = 
                             `修復規格：<b>${rows} x ${cols} 網格</b><br>` +
@@ -328,6 +330,25 @@
                     resetTurn();
                 }, 600);
             }
+        }
+
+        function sendDataToBackend(gameType, difficulty, seconds, attempts) {
+            const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdZPnQ-HjS57yLN3OZWQFxthZ7jrjiLqVSzYLoLQbEgFevVGA/formResponse";
+            
+            const formData = new FormData();
+            formData.append("entry.933068395", gameType);     // 遊戲類型
+            formData.append("entry.285404027", difficulty);   // 難度位數
+            formData.append("entry.1023575376", seconds);      // 破譯秒數
+            formData.append("entry.1728759450", attempts);     // 嘗試次數
+
+            // 使用背景非同步發送，mode: 'no-cors' 確保跨域請求能安全送達
+            fetch(formUrl, {
+                method: "POST",
+                body: formData,
+                mode: "no-cors"
+            }).then(() => {
+                console.log("📊 [SYSTEM] 測試數據已成功同步至雲端後台。");
+            }).catch(err => console.error("[ERROR] 後端同步失敗:", err));
         }
 
         function resetTurn() {

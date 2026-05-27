@@ -266,7 +266,7 @@
         let guessCount = 0;
         let isGameOver = false;
         let timerInterval = null; 
-        let isTimerStarted = false; // 🎯 核心改動：追蹤計時器是否已經被觸發開跑
+        let isTimerStarted = false; 
 
         // 初始化遊戲盤面
         function initGame() {
@@ -274,7 +274,6 @@
             guessCount = 0;
             selectedIndex = 0;
             
-            // 🎯 初始化時直接關閉舊計時器，且先「不」啟動新計時器
             if (timerInterval) {
                 clearInterval(timerInterval);
             }
@@ -313,11 +312,11 @@
             updateFocusUI();
         }
 
-        // 🎯 新增：負責在「第一次敲擊按鍵」時啟動時間軸的函式
+        // 負責在「第一次敲擊按鍵」時啟動時間軸的函式
         function startTimerIfNeeded() {
             if (!isTimerStarted && !isGameOver) {
                 isTimerStarted = true;
-                startTime = Date.now(); // 以按下第一個數字的當下作為基準起點
+                startTime = Date.now(); 
                 timerInterval = setInterval(updateTimerUI, 30);
             }
         }
@@ -326,6 +325,26 @@
             if (isGameOver) return;
             const elapsed = (Date.now() - startTime) / 1000;
             document.getElementById('game-timer').innerText = elapsed.toFixed(2) + " 秒";
+        }
+
+        // 🎯 新增：自動同步傳送數據至 Google 表單後台
+        function sendDataToBackend(gameType, difficulty, seconds, attempts) {
+            const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdZPnQ-HjS57yLN3OZWQFxthZ7jrjiLqVSzYLoLQbEgFevVGA/formResponse";
+            
+            const formData = new FormData();
+            formData.append("entry.933068395", gameType);     // 遊戲類型
+            formData.append("entry.285404027", difficulty);   // 難度位數
+            formData.append("entry.1023575376", seconds);      // 破譯秒數
+            formData.append("entry.1728759450", attempts);     // 嘗試次數
+
+            // 使用背景非同步發送，mode: 'no-cors' 確保跨域請求能安全送達
+            fetch(formUrl, {
+                method: "POST",
+                body: formData,
+                mode: "no-cors"
+            }).then(() => {
+                console.log("📊 [SYSTEM] 測試數據已成功同步至雲端後台。");
+            }).catch(err => console.error("[ERROR] 後端同步失敗:", err));
         }
 
         // 調整焦點高亮
@@ -344,7 +363,6 @@
         function handleKeyPress(key) {
             if (isGameOver) return;
 
-            // 🎯 核心改動：只要玩家有點擊任何有效按鍵（數字、倒退或確認），立刻檢查並啟動計時
             startTimerIfNeeded();
 
             if (key === '⌫') {
@@ -405,12 +423,15 @@
                 
                 const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
                 
+                // 🎯 觸發自動數據上傳
+                sendDataToBackend("numberle", passwordLength + "位數", timeUsed, guessCount);
+
                 setTimeout(() => {
                     document.getElementById('result-text').innerHTML = 
                         `挑戰難度：<b>${passwordLength} 位數</b><br>` +
                         `破譯時間：<span style="color:#2ECC71; font-weight:bold;">${timeUsed} 秒</span><br>` +
                         `嘗試次數：<b>${guessCount} 次</b><br><br>` +
-                        `請將此結果截圖回報給叡叡！`;
+                        `數據已自動後台同步，感謝參與測試！`;
                     document.getElementById('win-overlay').style.display = 'flex';
                 }, 600);
             } else {
