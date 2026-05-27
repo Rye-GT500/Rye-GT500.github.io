@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ 核心管道對齊測試端</title>
+    <style>
+        body {
+            background-color: #111111;
+            color: #00FF00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            font-size: 24px;
+            text-shadow: 0 0 10px #00FF00;
+        }
+
+        .subtitle {
+            color: #888888;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .timer-container {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00FF00;
+            background-color: #1A1A1A;
+            border: 1px solid #333333;
+            padding: 5px 20px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.2);
+            letter-spacing: 2px;
+        }
+
+        /* 4x4 水管網格 */
+        .pipe-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            grid-template-rows: repeat(4, 80px);
+            gap: 12px;
+            background-color: #151515;
+            padding: 15px;
+            border: 2px solid #333333;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        /* 水管單元格外框 */
+        .pipe-cell {
+            width: 80px;
+            height: 80px;
+            background-color: #222222;
+            border: 1px solid #444444;
+            box-sizing: border-box;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: transform 0.2s ease, background-color 0.3s;
+        }
+
+        .pipe-cell:hover {
+            border-color: #00FF00;
+            background-color: #2a2a2a;
+        }
+
+        /* 用 SVG 繪製高質感的極客風水管線條 */
+        .pipe-svg {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.2s ease; /* 旋轉時的流暢動畫 */
+        }
+
+        /* 未導通的水管顏色 */
+        .pipe-path {
+            fill: none;
+            stroke: #555555;
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* 導通成功後的酷炫螢光綠水管 */
+        .connected .pipe-path {
+            stroke: #00FF00 !important;
+            filter: drop-shadow(0 0 5px #00FF00);
+        }
+
+        /* 標示起點與終點的外框顏色 */
+        .start-node { border: 2px dashed #1ABC9C; position: relative; }
+        .end-node { border: 2px dashed #E67E22; position: relative; }
+        
+        .start-node::after { content: "IN"; position: absolute; top: -18px; left: 4px; font-size: 11px; color: #1ABC9C; font-weight: bold; }
+        .end-node::after { content: "OUT"; position: absolute; bottom: -18px; right: 4px; font-size: 11px; color: #E67E22; font-weight: bold; }
+
+        .back-btn {
+            background-color: #331111;
+            color: #E74C3C;
+            border: 1px solid #E74C3C;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background-color: #E74C3C;
+            color: white;
+            box-shadow: 0 0 10px #E74C3C;
+        }
+
+        /* 結算彈窗 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background-color: #222222;
+            border: 2px solid #00FF00;
+            padding: 30px;
+            text-align: center;
+            max-width: 320px;
+            width: 80%;
+            box-shadow: 0 0 20px #00FF00;
+        }
+
+        .modal h2 { margin-top: 0; color: #2ECC71; }
+        .modal p { color: white; font-size: 16px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+    <h1>⚡ 核心管道對齊中</h1>
+    <div class="subtitle">平民任務測試端 - 旋轉微調冷卻液管道使其全線導通</div>
+
+    <div class="timer-container" id="game-timer">00.00 秒</div>
+
+    <!-- 4x4 管道陣列 -->
+    <div id="grid" class="pipe-grid"></div>
+
+    <a href="../" class="back-btn">放棄修復 (返回大廳)</a>
+
+    <!-- 結算彈窗 -->
+    <div id="win-overlay" class="overlay">
+        <div class="modal">
+            <h2>🎉 管道解鎖成功！</h2>
+            <p id="result-text"></p>
+            <button class="mode-btn" onclick="initGame()" style="background-color: #222222; color: #00FF00; border: 1px solid #00FF00; padding: 8px 16px; cursor: pointer; font-weight: bold; margin-top: 15px;">再玩一把</button>
+        </div>
+    </div>
+
+    <script>
+        const size = 4; // 固定 4x4 規格
+        let gridData = [];
+        let isGameOver = false;
+        let isTimerStarted = false;
+        let startTime = 0;
+        let timerInterval = null;
+        let rotateCount = 0;
+
+        // 定義 4 種基本水管的四個方向 (上, 右, 下, 左) 的導通狀態 (1代表有開口)
+        const PIPE_TYPES = [
+            { name: 'I', paths: [1, 0, 1, 0], svg: '<path class="pipe-path" d="M40,0 L40,80"/>' }, // 直線管
+            { name: 'L', paths: [1, 1, 0, 0], svg: '<path class="pipe-path" d="M40,0 L40,40 L80,40"/>' }, // L彎管
+            { name: 'T', paths: [0, 1, 1, 1], svg: '<path class="pipe-path" d="M0,40 L80,40 M40,40 L40,80"/>' }, // 三通管
+            { name: 'X', paths: [1, 1, 1, 1], svg: '<path class="pipe-path" d="M40,0 L40,80 M0,40 L80,40"/>' }  // 十字管
+        ];
+
+        function initGame() {
+            isGameOver = false;
+            isTimerStarted = false;
+            rotateCount = 0;
+
+            if (timerInterval) clearInterval(timerInterval);
+            document.getElementById('game-timer').innerText = "00.00 秒";
+            document.getElementById('win-overlay').style.display = 'none';
+
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            gridData = [];
+
+            // 1. 隨機生成 4x4 水管矩陣並打亂初始旋轉角度
+            for (let r = 0; r < size; r++) {
+                gridData[r] = [];
+                for (let c = 0; c < size; c++) {
+                    // 隨機抽一種類型
+                    const typeIdx = Math.floor(Math.random() * PIPE_TYPES.length);
+                    const basePipe = PIPE_TYPES[typeIdx];
+                    
+                    // 隨機旋轉次數 (0~3次，代表 0°, 90°, 180°, 270°)
+                    const initialRotation = Math.floor(Math.random() * 4);
+                    
+                    gridData[r][c] = {
+                        typeIndex: typeIdx,
+                        rotation: initialRotation, // 0: 0度, 1: 90度, 2: 180度, 3: 270度
+                        r: r,
+                        c: c
+                    };
+
+                    // 建立 DOM 節點
+                    const cell = document.createElement('div');
+                    cell.className = 'pipe-cell';
+                    if (r === 0 && c === 0) cell.classList.add('start-node');
+                    if (r === size - 1 && c === size - 1) cell.classList.add('end-node');
+                    cell.id = `cell-${r}-${c}`;
+
+                    // 塞入 SVG 圖形
+                    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    svg.setAttribute("class", "pipe-svg");
+                    svg.setAttribute("viewBox", "0 0 80 80");
+                    svg.id = `svg-${r}-${c}`;
+                    svg.innerHTML = basePipe.svg;
+                    
+                    // 執行初始旋轉視覺
+                    svg.style.transform = `rotate(${initialRotation * 90}deg)`;
+
+                    cell.appendChild(svg);
+                    
+                    // 綁定點擊事件 (順時針旋轉 90 度)
+                    cell.addEventListener('click', () => handlePipeClick(r, c));
+                    gridElement.appendChild(cell);
+                }
+            }
+
+            // 萬一隨機出來的初始狀態就已經通關了，直接重洗
+            if (checkConnection(true)) {
+                initGame();
+            }
+        }
+
+        function startTimerIfNeeded() {
+            if (!isTimerStarted && !isGameOver) {
+                isTimerStarted = true;
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    if (isGameOver) return;
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    document.getElementById('game-timer').innerText = elapsed.toFixed(2) + " 秒";
+                }, 30);
+            }
+        }
+
+        function handlePipeClick(r, c) {
+            if (isGameOver) return;
+            startTimerIfNeeded();
+
+            rotateCount++;
+            // 數據層順時針旋轉
+            gridData[r][c].rotation = (gridData[r][c].rotation + 1) % 4;
+
+            // 視覺層旋轉動畫
+            const svg = document.getElementById(`svg-${r}-${c}`);
+            svg.style.transform = `rotate(${gridData[r][c].rotation * 90}deg)`;
+
+            // 檢查是否達成全線導通
+            checkConnection(false);
+        }
+
+        // 核心演算法：計算當前旋轉下的實體導通接口 (上、右、下、左)
+        // 陣列往右移代表順時針旋轉
+        function getDirections(pipe) {
+            const basePaths = PIPE_TYPES[pipe.typeIndex].paths;
+            const rot = pipe.rotation;
+            const currentPaths = [];
+            for (let i = 0; i < 4; i++) {
+                currentPaths[(i + rot) % 4] = basePaths[i];
+            }
+            return currentPaths; // 回傳長度 4 的 [上, 右, 下, 左] 1/0 陣列
+        }
+
+        // 深度優先搜尋 (DFS) 驗證是否從 (0,0) 通到 (3,3)
+        function checkConnection(isCheckingInit) {
+            const visited = Array.from({ length: size }, () => Array(size).fill(false));
+            const connectedCells = []; // 存下所有通電的水管節點
+
+            function dfs(r, c, comingFromDir) {
+                if (r < 0 || r >= size || c < 0 || c >= size || visited[r][c]) return false;
+
+                const currentDirs = getDirections(gridData[r][c]);
+
+                // 如果這格不支援進來的前進方向，直接斷路 (例如從上方走來，這格必須要有「上」接口)
+                if (comingFromDir !== null && currentDirs[comingFromDir] === 0) return false;
+
+                visited[r][c] = true;
+                connectedCells.push({ r, c });
+
+                // 成功抵達終點 (3,3)，且終點本身必須擁有輸出接口（我們預設終點必須能連通，不限方向，但最常見是右或下開口）
+                if (r === size - 1 && c === size - 1) {
+                    return true;
+                }
+
+                // 往四個方向延伸：[0:上, 1:右, 2:下, 3:左]
+                // 往上走 (r-1)，對下一格來說是從下方進來 (2)
+                if (currentDirs[0] === 1 && dfs(r - 1, c, 2)) return true;
+                // 往右走 (c+1)，對下一格來說是從左方進來 (3)
+                if (currentDirs[1] === 1 && dfs(r, c + 1, 3)) return true;
+                // 往下走 (r+1)，對下一格來說是從上方進來 (0)
+                if (currentDirs[2] === 1 && dfs(r + 1, c, 0)) return true;
+                // 往左走 (c-1)，對下一格來說是從右方進來 (1)
+                if (currentDirs[3] === 1 && dfs(r, c - 1, 1)) return true;
+
+                return false;
+            }
+
+            // 檢查起點 (0,0) 是否有對接通路
+            // 這裡做個寬容設定：起點無論如何都能進水
+            const isConnected = dfs(0, 0, null);
+
+            if (isConnected && !isCheckingInit) {
+                isGameOver = true;
+                clearInterval(timerInterval);
+                const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
+
+                // 全場亮綠色螢光通電特效！
+                connectedCells.forEach(node => {
+                    document.getElementById(`cell-${node.r}-${node.c}`).classList.add('connected');
+                });
+
+                // 自動送入 Google 表單大數據後台！
+                sendDataToBackend("pipe_align", `${size}x${size}陣列`, timeUsed, rotateCount);
+
+                setTimeout(() => {
+                    document.getElementById('result-text').innerHTML = 
+                        `任務規格：<b>4 x 4 管道對齊</b><br>` +
+                        `對齊時間：<span style="color:#2ECC71; font-weight:bold;">${timeUsed} 秒</span><br>` +
+                        `旋轉次數：<b>${rotateCount} 次</b><br><br>` +
+                        `數據已自動後台同步，感謝參與測試！`;
+                    document.getElementById('win-overlay').style.display = 'flex';
+                }, 600);
+            }
+
+            return isConnected;
+        }
+
+        function sendDataToBackend(gameType, difficulty, seconds, attempts) {
+            const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdZPnQ-HjS57yLN3OZWQFxthZ7jrjiLqVSzYLoLQbEgFevVGA/formResponse";
+            const formData = new FormData();
+            formData.append("entry.933068395", gameType);     
+            formData.append("entry.285404027", difficulty);   
+            formData.append("entry.1023575376", seconds);      
+            formData.append("entry.1728759450", attempts);     
+
+            fetch(formUrl, {
+                method: "POST",
+                body: formData,
+                mode: "no-cors"
+            }).then(() => {
+                console.log("📊 [SYSTEM] 管道測試數據已同步至叡叡的後台。");
+            }).catch(err => console.error("[ERROR] 後端同步失敗:", err));
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
