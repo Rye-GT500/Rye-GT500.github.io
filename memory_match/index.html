@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧬 核心記憶體配對測試端</title>
+    <style>
+        body {
+            background-color: #111111;
+            color: #00FF00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            font-size: 24px;
+            text-shadow: 0 0 10px #00FF00;
+        }
+
+        .subtitle {
+            color: #888888;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* 難度選擇選單 */
+        .mode-selector {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-btn {
+            background-color: #222222;
+            color: #00FF00;
+            border: 1px solid #00FF00;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background-color: #00FF00;
+            color: #111111;
+            box-shadow: 0 0 10px #00FF00;
+        }
+
+        /* 數位計時器容器 */
+        .timer-container {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00FF00;
+            background-color: #1A1A1A;
+            border: 1px solid #333333;
+            padding: 5px 20px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.2);
+            letter-spacing: 2px;
+        }
+
+        /* 動態網格容器 */
+        .grid-container {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 卡片樣式 */
+        .card {
+            width: 75px;
+            height: 75px;
+            background-color: #34495E;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 4px;
+            border: 1px solid #2C3E50;
+            transition: background-color 0.15s, transform 0.1s;
+        }
+
+        .card:active {
+            transform: scale(0.95);
+        }
+
+        /* 翻開狀態 */
+        .card.flipped {
+            background-color: #1ABC9C;
+            cursor: default;
+        }
+
+        /* 已配對成功狀態 */
+        .card.matched {
+            background-color: #27AE60;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: default;
+            border-color: #27AE60;
+        }
+
+        /* 回首頁按鈕 */
+        .back-btn {
+            background-color: #331111;
+            color: #E74C3C;
+            border: 1px solid #E74C3C;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background-color: #E74C3C;
+            color: white;
+            box-shadow: 0 0 10px #E74C3C;
+        }
+
+        /* 結算彈窗 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background-color: #222222;
+            border: 2px solid #00FF00;
+            padding: 30px;
+            text-align: center;
+            max-width: 320px;
+            width: 80%;
+            box-shadow: 0 0 20px #00FF00;
+        }
+
+        .modal h2 { margin-top: 0; color: #2ECC71; }
+        .modal p { color: white; font-size: 16px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+    <h1>🧬 核心記憶體配對</h1>
+    <div class="subtitle">平民任務測試端 - 修復損壞的記憶體區塊</div>
+
+    <div class="mode-selector">
+        <button class="mode-btn active" onclick="changeGrid(3, 4)">3 x 4 网格</button>
+        <button class="mode-btn" onclick="changeGrid(4, 4)">4 x 4 网格</button>
+    </div>
+
+    <div class="timer-container" id="game-timer">00.00 秒</div>
+
+    <div id="grid" class="grid-container"></div>
+
+    <a href="../" class="back-btn">放棄修復 (返回大廳)</a>
+
+    <div id="win-overlay" class="overlay">
+        <div class="modal">
+            <h2>🎉 修復完成！</h2>
+            <p id="result-text"></p>
+            <button class="mode-btn" onclick="initGame()" style="margin-top: 15px;">再玩一把</button>
+        </div>
+    </div>
+
+    <script>
+        let rows = 3;
+        let cols = 4;
+        let totalCards = 12;
+        
+        let cardValues = [];
+        let firstClickedIndex = -1;
+        let secondClickedIndex = -1;
+        
+        let isProcessing = false;
+        let isGameOver = false;
+        let isTimerStarted = false;
+        
+        let startTime = 0;
+        let timerInterval = null;
+        let matchedPairs = 0;
+
+        // 與 Java 規格完全相同的 Emoji 資源池
+        const EMOJI_POOL = [
+            "🍎", "💡", "🍇", "🤖", "🚀", "🛸", "💎", "🔑",
+            "🐱", "🐸", "🍀", "🔥", "👻", "⚽", "🎸", "👑"
+        ];
+
+        function initGame() {
+            isGameOver = false;
+            isProcessing = false;
+            isTimerStarted = false;
+            firstClickedIndex = -1;
+            secondClickedIndex = -1;
+            matchedPairs = 0;
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            document.getElementById('game-timer').innerText = "00.00 秒";
+            document.getElementById('win-overlay').style.display = 'none';
+
+            // 1. 根據規格計算對數並抽取 Emoji
+            const targetPairs = totalCards / 2;
+            let selectedEmojis = [];
+            for (let i = 0; i < targetPairs; i++) {
+                let emoji = EMOJI_POOL[i % EMOJI_POOL.length];
+                selectedEmojis.push(emoji);
+                selectedEmojis.push(emoji); // 成對
+            }
+
+            // 2. 洗牌演算法 (Shuffle)
+            for (let i = selectedEmojis.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [selectedEmojis[i], selectedEmojis[j]] = [selectedEmojis[j], selectedEmojis[i]];
+            }
+            cardValues = selectedEmojis;
+
+            // 3. 渲染網格 UI
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            gridElement.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+            for (let i = 0; i < totalCards; i++) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = 'card-' + i;
+                card.innerText = '?';
+                card.addEventListener('click', () => handleCardClick(i));
+                gridElement.appendChild(card);
+            }
+        }
+
+        // 🎯 觸發式計時：點擊第一張卡片時才開跑
+        function startTimerIfNeeded() {
+            if (!isTimerStarted && !isGameOver) {
+                isTimerStarted = true;
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    if (isGameOver) return;
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    document.getElementById('game-timer').innerText = elapsed.toFixed(2) + " 秒";
+                }, 30);
+            }
+        }
+
+        function handleCardClick(index) {
+            const card = document.getElementById('card-' + index);
+
+            // 擋卡：動畫處理中、卡片已翻開或配對成功、重複點同一張
+            if (isProcessing || card.classList.contains('flipped') || card.classList.contains('matched') || index === firstClickedIndex) {
+                return;
+            }
+
+            // 啟動計時器
+            startTimerIfNeeded();
+
+            // 翻開當前卡片
+            card.innerText = cardValues[index];
+            card.classList.add('flipped');
+
+            if (firstClickedIndex === -1) {
+                firstClickedIndex = index;
+            } else {
+                secondClickedIndex = index;
+                isProcessing = true;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const firstCard = document.getElementById('card-' + firstClickedIndex);
+            const secondCard = document.getElementById('card-' + secondClickedIndex);
+
+            if (cardValues[firstClickedIndex] === cardValues[secondClickedIndex]) {
+                // 配對成功
+                matchedPairs++;
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+
+                resetTurn();
+
+                // 檢查是否全數通關
+                if (matchedPairs === (totalCards / 2)) {
+                    isGameOver = true;
+                    clearInterval(timerInterval);
+                    const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
+
+                    setTimeout(() => {
+                        document.getElementById('result-text').innerHTML = 
+                            `修復規格：<b>${rows} x ${cols} 網格</b><br>` +
+                            `修復時間：<span style="color:#2ECC71; font-weight:bold;">${timeUsed} 秒</span><br><br>` +
+                            `請將此結果截圖回報給叡叡！`;
+                        document.getElementById('win-overlay').style.display = 'flex';
+                    }, 500);
+                }
+            } else {
+                // 配對失敗：維持與 Android 一致的 600ms 蓋回動畫
+                setTimeout(() => {
+                    firstCard.innerText = '?';
+                    secondCard.innerText = '?';
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    resetTurn();
+                }, 600);
+            }
+        }
+
+        function resetTurn() {
+            firstClickedIndex = -1;
+            secondClickedIndex = -1;
+            isProcessing = false;
+        }
+
+        // 切換網格難度
+        function changeGrid(r, c) {
+            rows = r;
+            cols = c;
+            totalCards = r * c;
+
+            const btns = document.querySelectorAll('.mode-btn');
+            btns.forEach(btn => {
+                if (btn.innerText.includes(`${r} x ${c}`)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            initGame();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>

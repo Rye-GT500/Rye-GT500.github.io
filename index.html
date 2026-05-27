@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 核心矩陣解碼測試端</title>
+    <title>⚡ RYE 核心任務測試大廳</title>
     <style>
         body {
-            background-color: #111111;
+            background-color: #0a0a0a;
             color: #00FF00;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
@@ -17,452 +17,174 @@
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* 矩陣背景微動畫 */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 999;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .terminal-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #111111;
+            border: 2px solid #00FF00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            padding: 30px;
+            box-sizing: border-box;
+            border-radius: 8px;
         }
 
         h1 {
-            margin-bottom: 5px;
             font-size: 24px;
-            text-shadow: 0 0 10px #00FF00;
-        }
-
-        .subtitle {
-            color: #888888;
-            font-size: 14px;
-            margin-bottom: 20px;
+            margin-top: 0;
             text-align: center;
+            text-shadow: 0 0 10px #00FF00;
+            border-bottom: 1px dashed #00FF00;
+            padding-bottom: 15px;
         }
 
-        .timer-container {
-            font-size: 28px;
-            font-weight: bold;
+        .console-log {
+            color: #888888;
+            font-size: 13px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .system-status {
             color: #00FF00;
-            background-color: #1A1A1A;
-            border: 1px solid #333333;
-            padding: 5px 20px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.2);
-            letter-spacing: 2px;
-        }
-
-        /* 難度選擇選單 */
-        .mode-selector {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .mode-btn {
-            background-color: #222222;
-            color: #00FF00;
-            border: 1px solid #00FF00;
-            padding: 8px 16px;
-            cursor: pointer;
             font-weight: bold;
-            font-family: inherit;
-            transition: all 0.2s;
         }
 
-        .mode-btn.active {
-            background-color: #00FF00;
-            color: #111111;
-            box-shadow: 0 0 10px #00FF00;
-        }
-
-        /* 歷史紀錄區 */
-        #history-scroll {
-            width: 100%;
-            max-width: 400px;
-            height: 180px;
-            border: 1px solid #333333;
-            background-color: #050505;
-            margin-bottom: 20px;
-            overflow-y: auto;
-            padding: 10px;
-            box-sizing: border-box;
+        /* 選單按鈕區塊 */
+        .menu-list {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 15px;
         }
 
-        .history-row {
-            display: flex;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .history-tile {
-            width: 32px;
-            height: 38px;
+        .menu-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
+            justify-content: space-between;
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            padding: 15px 20px;
+            text-decoration: none;
+            color: #00FF00;
             font-weight: bold;
             font-size: 16px;
-        }
-
-        /* 當前輸入槽 */
-        #slot-container {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-
-        .input-slot {
-            width: 50px;
-            height: 65px;
-            background-color: #222222;
-            border: 2px solid #333333;
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transition: all 0.2s ease-in-out;
             cursor: pointer;
-            user-select: none;
-            transition: background-color 0.2s;
+            position: relative;
+            overflow: hidden;
         }
 
-        .input-slot.focused {
-            background-color: #444444;
+        /* 預備點擊的高亮效果 */
+        .menu-item:hover {
+            background-color: #00FF00;
+            color: #111111;
+            box-shadow: 0 0 15px #00FF00;
             border-color: #00FF00;
-            box-shadow: 0 0 5px #00FF00;
+            transform: translateY(-2px);
         }
 
-        /* 虛擬鍵盤 */
-        .keyboard {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
-            width: 100%;
-            max-width: 400px;
+        .menu-item::before {
+            content: "> ";
+            margin-right: 5px;
         }
 
-        .keyboard-row {
-            display: flex;
-            gap: 6px;
-            width: 100%;
-            justify-content: center;
+        /* 未開放遊戲的鎖定樣式 */
+        .menu-item.locked {
+            color: #555555;
+            border-color: #222222;
+            background-color: #0d0d0d;
+            cursor: not-allowed;
+            pointer-events: none; /* 停用點擊 */
         }
 
-        .key-btn {
-            flex: 1;
-            max-width: 70px;
-            height: 55px;
-            background-color: #333333;
-            color: white;
-            border: none;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            font-family: inherit;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
+        .menu-item.locked:hover {
+            background-color: #0d0d0d;
+            color: #555555;
+            box-shadow: none;
+            transform: none;
         }
 
-        .key-btn:active {
-            background-color: #555555;
+        .menu-item.locked::before {
+            content: "🔒 ";
         }
 
-        .key-btn.action-back {
-            background-color: #B71C1C;
-            max-width: 110px;
+        .badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
         }
 
-        .key-btn.action-submit {
+        .badge-ready {
             background-color: #1B5E20;
-            max-width: 110px;
+            color: #fff;
         }
 
-        /* 狀態顏色定義 */
-        .color-green { background-color: #2ECC71; border-color: #2ECC71; }
-        .color-yellow { background-color: #F1C40F; border-color: #F1C40F; }
-        .color-red { background-color: #E74C3C; border-color: #E74C3C; }
-
-        /* 彈窗提示 */
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0,0,0,0.85);
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
+        .badge-locked {
+            background-color: #333333;
+            color: #888888;
         }
 
-        .modal {
-            background-color: #222222;
-            border: 2px solid #00FF00;
-            padding: 30px;
+        .footer {
+            margin-top: 25px;
             text-align: center;
-            max-width: 320px;
-            width: 80%;
-            box-shadow: 0 0 20px #00FF00;
+            font-size: 12px;
+            color: #444444;
+            border-top: 1px solid #222222;
+            padding-top: 15px;
         }
-
-        .modal h2 { margin-top: 0; color: #2ECC71; }
-        .modal p { color: white; font-size: 16px; line-height: 1.6; }
     </style>
 </head>
 <body>
 
-    <h1>🔐 核心矩陣解碼中</h1>
-    <div class="subtitle">平民任務測試端 - 請破譯核心安全密碼</div>
-
-    <div class="mode-selector">
-        <button class="mode-btn" onclick="changeDifficulty(4)">4 位數</button>
-        <button class="mode-btn active" onclick="changeDifficulty(5)">5 位數</button>
-        <button class="mode-btn" onclick="changeDifficulty(6)">6 位數</button>
-    </div>
-
-    <div class="timer-container" id="game-timer">00.00 秒</div>
-
-    <div id="history-scroll"></div>
-
-    <div id="slot-container"></div>
-
-    <div class="keyboard">
-        <div class="keyboard-row">
-            <button class="key-btn" onclick="handleKeyPress('1')">1</button>
-            <button class="key-btn" onclick="handleKeyPress('2')">2</button>
-            <button class="key-btn" onclick="handleKeyPress('3')">3</button>
-            <button class="key-btn" onclick="handleKeyPress('4')">4</button>
-            <button class="key-btn" onclick="handleKeyPress('5')">5</button>
-        </div>
-        <div class="keyboard-row">
-            <button class="key-btn" onclick="handleKeyPress('6')">6</button>
-            <button class="key-btn" onclick="handleKeyPress('7')">7</button>
-            <button class="key-btn" onclick="handleKeyPress('8')">8</button>
-            <button class="key-btn" onclick="handleKeyPress('9')">9</button>
-            <button class="key-btn" onclick="handleKeyPress('0')">0</button>
-        </div>
-        <div class="keyboard-row">
-            <button class="key-btn action-back" onclick="handleKeyPress('⌫')">⌫</button>
-            <button class="key-btn action-submit" onclick="handleKeyPress('✔')">✔</button>
-        </div>
-    </div>
-
-    <div id="win-overlay" class="overlay">
-        <div class="modal">
-            <h2>🎉 解碼成功！</h2>
-            <p id="result-text"></p>
-            <button class="mode-btn" onclick="initGame()" style="margin-top: 15px;">再玩一把</button>
-        </div>
-    </div>
-
-    <script>
-        let passwordLength = 5; 
-        let targetAnswer = "";
-        let currentInput = [];
-        let selectedIndex = 0;
+    <div class="terminal-container">
+        <h1>⚡ RYE SYSTEM PORTAL v1.0</h1>
         
-        let startTime = 0;
-        let guessCount = 0;
-        let isGameOver = false;
-        let timerInterval = null; 
-        let isTimerStarted = false; // 🎯 核心改動：追蹤計時器是否已經被觸發開跑
+        <div class="console-log">
+            [SYSINFO] 初始化測試主機環境... <span class="system-status">SUCCESS</span><br>
+            [SYSINFO] 正在載入平民解密任務模組... <span class="system-status">ONLINE</span><br>
+            [SYSINFO] 提示：請朋友們選擇下方開發中項目進行 Playtest 盲測。
+        </div>
 
-        // 初始化遊戲盤面
-        function initGame() {
-            isGameOver = false;
-            guessCount = 0;
-            selectedIndex = 0;
-            
-            // 🎯 初始化時直接關閉舊計時器，且先「不」啟動新計時器
-            if (timerInterval) {
-                clearInterval(timerInterval);
-            }
-            isTimerStarted = false; 
-            
-            document.getElementById('game-timer').innerText = "00.00 秒";
-            document.getElementById('win-overlay').style.display = 'none';
-            document.getElementById('history-scroll').innerHTML = '';
+        <div class="menu-list">
+            <!-- 任務 1：猜數字遊戲 (已開放) -->
+            <a href="./numberle/" class="menu-item">
+                <span>安全矩陣解碼 (Numberle)</span>
+                <span class="badge badge-ready">可測試</span>
+            </a>
 
-            // 1. 隨機產生密碼
-            targetAnswer = "";
-            for (let i = 0; i < passwordLength; i++) {
-                targetAnswer += Math.floor(Math.random() * 10).toString();
-            }
-            console.log("後端作弊密碼提示: " + targetAnswer); 
+            <!-- 任務 2：記憶體配對 (預留位置，未來上傳直接把 href 改成 ./memory_match/) -->
+            <a href="./memory_match/" class="menu-item">
+                <span>記憶核心配對 (MemoryMatch)</span>
+                <span class="badge badge-ready">可測試</span>
+            </a>
+            </a>
 
-            // 2. 建立輸入陣列
-            currentInput = new Array(passwordLength).fill("");
+            <!-- 任務 3：數獨自動化 (預留位置) -->
+            <a href="#" class="menu-item locked">
+                <span>數獨矩陣同步 (Sudoku)</span>
+                <span class="badge badge-locked">鎖定中</span>
+            </a>
+        </div>
 
-            // 3. 動態渲染輸入槽 UI
-            const container = document.getElementById('slot-container');
-            container.innerHTML = '';
-            for (let i = 0; i < passwordLength; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'input-slot';
-                slot.id = 'slot-' + i;
-                slot.innerText = '';
-                slot.addEventListener('click', () => {
-                    if (isGameOver) return;
-                    selectedIndex = i;
-                    updateFocusUI();
-                });
-                container.appendChild(slot);
-            }
+        <div class="footer">
+            &copy; 2026 RYE-GT500 主機系統. 保留所有破譯權利.
+        </div>
+    </div>
 
-            updateFocusUI();
-        }
-
-        // 🎯 新增：負責在「第一次敲擊按鍵」時啟動時間軸的函式
-        function startTimerIfNeeded() {
-            if (!isTimerStarted && !isGameOver) {
-                isTimerStarted = true;
-                startTime = Date.now(); // 以按下第一個數字的當下作為基準起點
-                timerInterval = setInterval(updateTimerUI, 30);
-            }
-        }
-
-        function updateTimerUI() {
-            if (isGameOver) return;
-            const elapsed = (Date.now() - startTime) / 1000;
-            document.getElementById('game-timer').innerText = elapsed.toFixed(2) + " 秒";
-        }
-
-        // 調整焦點高亮
-        function updateFocusUI() {
-            for (let i = 0; i < passwordLength; i++) {
-                const slot = document.getElementById('slot-' + i);
-                if (i === selectedIndex) {
-                    slot.classList.add('focused');
-                } else {
-                    slot.classList.remove('focused');
-                }
-            }
-        }
-
-        // 處理鍵盤點擊
-        function handleKeyPress(key) {
-            if (isGameOver) return;
-
-            // 🎯 核心改動：只要玩家有點擊任何有效按鍵（數字、倒退或確認），立刻檢查並啟動計時
-            startTimerIfNeeded();
-
-            if (key === '⌫') {
-                currentInput[selectedIndex] = "";
-                document.getElementById('slot-' + selectedIndex).innerText = "";
-                if (selectedIndex > 0) {
-                    selectedIndex--;
-                }
-                updateFocusUI();
-            } else if (key === '✔') {
-                if (currentInput.includes("")) {
-                    alert("密碼未填滿！");
-                    return;
-                }
-                checkGuess();
-            } else {
-                currentInput[selectedIndex] = key;
-                document.getElementById('slot-' + selectedIndex).innerText = key;
-                
-                if (selectedIndex < passwordLength - 1) {
-                    selectedIndex++;
-                }
-                updateFocusUI();
-            }
-        }
-
-        // 核心驗證與染色邏輯
-        function checkGuess() {
-            const guessStr = currentInput.join('');
-            let correctCount = 0;
-            const colors = [];
-
-            for (let i = 0; i < passwordLength; i++) {
-                const gChar = guessStr[i];
-                if (gChar === targetAnswer[i]) {
-                    colors.push('color-green'); 
-                    correctCount++;
-                } else if (targetAnswer.indexOf(gChar) !== -1) {
-                    colors.push('color-yellow'); 
-                } else {
-                    colors.push('color-red'); 
-                }
-            }
-
-            guessCount++;
-
-            for (let i = 0; i < passwordLength; i++) {
-                const slot = document.getElementById('slot-' + i);
-                slot.classList.remove('color-green', 'color-yellow', 'color-red');
-                slot.classList.add(colors[i]);
-            }
-
-            addHistoryRow(guessStr, colors);
-
-            if (correctCount === passwordLength) {
-                isGameOver = true;
-                clearInterval(timerInterval); // 破譯成功立刻凍結
-                
-                const timeUsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                
-                setTimeout(() => {
-                    document.getElementById('result-text').innerHTML = 
-                        `挑戰難度：<b>${passwordLength} 位數</b><br>` +
-                        `破譯時間：<span style="color:#2ECC71; font-weight:bold;">${timeUsed} 秒</span><br>` +
-                        `嘗試次數：<b>${guessCount} 次</b><br><br>` +
-                        `請將此結果截圖回報給叡叡！`;
-                    document.getElementById('win-overlay').style.display = 'flex';
-                }, 600);
-            } else {
-                selectedIndex = 0;
-                setTimeout(updateFocusUI, 1000);
-            }
-        }
-
-        // 渲染歷史面板列
-        function addHistoryRow(guessStr, colors) {
-            const scrollArea = document.getElementById('history-scroll');
-            const row = document.createElement('div');
-            row.className = 'history-row';
-
-            for (let i = 0; i < passwordLength; i++) {
-                const tile = document.createElement('div');
-                tile.className = `history-tile ${colors[i]}`;
-                tile.innerText = guessStr[i];
-                row.appendChild(tile);
-            }
-
-            scrollArea.appendChild(row);
-            scrollArea.scrollTop = scrollArea.scrollHeight;
-        }
-
-        // 切換難度
-        function changeDifficulty(len) {
-            passwordLength = len;
-            
-            const btns = document.querySelectorAll('.mode-btn');
-            btns.forEach(btn => {
-                if (btn.innerText.includes(len.toString())) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-
-            initGame();
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (/^[0-9]$/.test(e.key)) {
-                handleKeyPress(e.key);
-            } else if (e.key === 'Backspace') {
-                handleKeyPress('⌫');
-            } else if (e.key === 'Enter') {
-                handleKeyPress('✔');
-            }
-        });
-
-        window.onload = initGame;
-    </script>
 </body>
 </html>
